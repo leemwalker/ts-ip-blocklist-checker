@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "noImplicitAny": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "esModuleInterop": true 
+  },
+  "files": [
+    "lambdas/ip_scraper_and_parser.ts",
+    "lambdas/ip_scraper_and_parser.test.ts"
+  ],
+  "types": [
+    "jest",
+    "mocha"
+  ]
+}
