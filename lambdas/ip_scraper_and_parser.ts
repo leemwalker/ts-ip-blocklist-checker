@@ -1,12 +1,32 @@
 
 import fetch from 'cross-fetch';
-import 'csv-parser';
-import 'fs';
+import { fstat } from 'fs';
+import fs from 'fs';
+import csv from 'csv';
+import csvParse from 'csv-parse';
+import { resourceLimits } from 'worker_threads';
+import { variableDeclaration } from '@babel/types';
 
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
-const csvWriter = createCsvWriter({
-  path: 'ip_addresses.csv',
+const csvWriterOne = createCsvWriter({
+  path: 'ip_addresses_lvl1.csv',
+  header: [
+    {id: 'address', title: 'Address'},
+    {id: 'level', title: 'Level'}
+  ]
+});
+
+const csvWriterTwo = createCsvWriter({
+  path: 'ip_addresses_lvl2.csv',
+  header: [
+    {id: 'address', title: 'Address'},
+    {id: 'level', title: 'Level'}
+  ]
+});
+
+const csvWriterThree = createCsvWriter({
+  path: 'ip_addresses_lvl3.csv',
   header: [
     {id: 'address', title: 'Address'},
     {id: 'level', title: 'Level'}
@@ -28,25 +48,22 @@ async function pullFromRepo<T>(url: string): Promise<T> {
 
 async function chainResults(BaseURL: string) {
   let fileList = JSON.parse(JSON.stringify(await pullFromRepo(BaseURL)));
+  let ipList: Set<string>;
 
   for (let file of fileList["tree"]) {
     if (file["path"].endsWith(".ipset") || file["path"].endsWith(".netset")) {
       let currentFile = JSON.parse(JSON.stringify(await pullFromRepo(file["url"])));
       let fileContents = Buffer.from(currentFile["content"], currentFile["encoding"]).toString('utf-8');
       let fileLevel = checkLevel(file["path"]);
-      // Write the resulting IPs along with the fileLevel to the IP Adress CSV
-      // Break this section out into a separate function to keep this one as small as possible
-      // Create another function that takes the finished product and dedupes the list of IPs, making sure to keep the highest level.
+      ipList = cleanFileContents(fileContents);
+      await writeToCsv(ipList, fileLevel)
     }
   }
+
+  cleanFiles('ip_addresses_lvl1.csv');
+  cleanFiles('ip_addresses_lvl2.csv');
+  cleanFiles('ip_addresses_lvl3.csv');
 }
-function cleanFileContents(fileContents: string) {
-  // Parse the file, remove any comments and check for any duplicate IPs, return comma delimited list of IPs
-
-  console.log(fileContents)
-
-}
-
 
 function checkLevel(filename: string) {
   var levelOne = ["feodo", "palevo", "sslbl", "zeus_badips", "dshield", "spamhaus_drop", "spamhaus_edrop", "bogons", "fullbogons"];
@@ -68,5 +85,84 @@ function checkLevel(filename: string) {
   return "3";
 }
 
+function cleanFileContents(fileContents: string) {
+  let unparsedIpList = []
+
+  for (let line of fileContents.split("\n")) {
+    if (!(line.startsWith("#"))) {
+      console.log(line);
+      unparsedIpList.push(line);
+    }
+  return checkForDuplicateIps(unparsedIpList);
+  }
+}
+
+function checkForDuplicateIps(unparsedIpList: any) {
+  return new Set<string>(unparsedIpList)
+}
+
+async function writeToCsv(ipList: Set<string>, ipLevel: string ) {
+  let ipsAndLevel = []
+
+  for(let ip in ipList){
+    let ipAndLevel = {address: ip, level: ipLevel};
+    ipsAndLevel.push(ipAndLevel);
+  }
+  
+  if (ipLevel == "1") {
+    csvWriterOne.writeRecords(ipsAndLevel)
+    pullAddressesFromCSV('ip_addresses_lvl1.csv')
+  }
+  if (ipLevel == "2") {
+    csvWriterTwo.writeRecords(ipsAndLevel)
+    pullAddressesFromCSV('ip_addresses_lvl2.csv')
+  }
+  if (ipLevel == "3") {
+    csvWriterThree.writeRecords(ipsAndLevel)
+    pullAddressesFromCSV('ip_addresses_lvl3.csv')
+  }
+
+  
+}
+
+async function pullAddressesFromCSV(csvFile: string) {
+  let ipAddresses: any[] = [];
+  
+  return new Promise(function(resolve, reject) {
+    fs.createReadStream(csvFile)
+      .pipe(csvParse({delimiter: ',', columns: true}))
+      .on('error', error => (error))
+      .on('data', row => ipAddresses.push(row['Address']))
+      .on('end', () => {
+        resolve(ipAddresses);
+      });
+  });
+}
+
+async function cleanFiles(csvFile: string) {
+  let unparsedIpList: {};
+  
+  unparsedIpList = await pullAddressesFromCSV(csvFile);
+  let parsedIpList = checkForDuplicateIps(unparsedIpList);
+
+  if (csvFile == 'ip_addresses_lvl1.csv') {
+    fs.unlinkSync(csvFile)
+    csvWriterOne.writeRecords(parsedIpList)
+    pullAddressesFromCSV(csvFile)
+  }
+  if (csvFile == 'ip_addresses_lvl2.csv') {
+    fs.unlinkSync(csvFile)
+    csvWriterTwo.writeRecords(parsedIpList)
+    pullAddressesFromCSV(csvFile)
+  }
+  if (csvFile == 'ip_addresses_lvl3.csv') {
+    fs.unlinkSync(csvFile)
+    csvWriterThree.writeRecords(parsedIpList)
+    pullAddressesFromCSV(csvFile)
+  }
+}
+
 
 chainResults(BaseURL);
+
+  
