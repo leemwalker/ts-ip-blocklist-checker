@@ -3,3 +3,7 @@ node_modules
 .gitignore
 *.test.ts
 *.js
+terraform/.terraform
+terraform/lambdas
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup

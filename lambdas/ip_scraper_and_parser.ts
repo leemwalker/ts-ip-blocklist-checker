@@ -1,11 +1,15 @@
-
 import fetch from 'cross-fetch';
+<<<<<<< HEAD
 import { fstat } from 'fs';
 import fs from 'fs';
 import csv from 'csv';
 import csvParse from 'csv-parse';
 import { resourceLimits } from 'worker_threads';
 import { variableDeclaration } from '@babel/types';
+=======
+import fs from 'fs';
+import csvParse from 'csv-parse';
+>>>>>>> 3cf5bad... Adding terraform files and final changes to lambda code
 
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
@@ -68,24 +72,27 @@ async function chainResults(BaseURL: string) {
 function checkLevel(filename: string) {
   var levelOne = ["feodo", "palevo", "sslbl", "zeus_badips", "dshield", "spamhaus_drop", "spamhaus_edrop", "bogons", "fullbogons"];
   var levelTwo = ["openbl", "blocklist_de", "zeus"];
-
+  
   for (var i = 0; i < levelOne.length; i++) {
     if (filename.indexOf(levelOne[i]) > -1) {
       console.log("This is a level 1 IP Blocklist")
       return "1";
     }
   }
+
   for (var i = 0; i < levelTwo.length; i++) {
     if (filename.indexOf(levelTwo[i]) > -1) {
       console.log("This is a level 2 IP Blocklist")
       return "2";
     }
   }
+
   console.log("This is a level 3 IP Blocklist")
   return "3";
 }
 
 function cleanFileContents(fileContents: string) {
+<<<<<<< HEAD
   let unparsedIpList = []
 
   for (let line of fileContents.split("\n")) {
@@ -95,21 +102,43 @@ function cleanFileContents(fileContents: string) {
     }
   return checkForDuplicateIps(unparsedIpList);
   }
+=======
+  let unparsedIpList = [];
+  for (let line of fileContents.split(/\r\n|\r|\n/)) {
+    if (!line.startsWith("#")) {
+      unparsedIpList.push(line);
+    }
+  }
+
+  return checkForDuplicateIps(unparsedIpList);
+>>>>>>> 3cf5bad... Adding terraform files and final changes to lambda code
 }
 
 function checkForDuplicateIps(unparsedIpList: any) {
   return new Set<string>(unparsedIpList)
 }
 
+<<<<<<< HEAD
 async function writeToCsv(ipList: Set<string>, ipLevel: string ) {
   let ipsAndLevel = []
 
   for(let ip in ipList){
+=======
+// Add another function here that validates the IPs, ensuring the format 
+// ranges from 1.0.0.1 to 255.255.255.255
+
+async function writeToCsv(ipList: Set<string>, ipLevel: string ) {
+  let ipsAndLevel = []
+
+  for(let ip of ipList.values()){
+    //Verify if the ipList or ip is the problem or if it happens after
+>>>>>>> 3cf5bad... Adding terraform files and final changes to lambda code
     let ipAndLevel = {address: ip, level: ipLevel};
     ipsAndLevel.push(ipAndLevel);
   }
   
   if (ipLevel == "1") {
+<<<<<<< HEAD
     csvWriterOne.writeRecords(ipsAndLevel)
     pullAddressesFromCSV('ip_addresses_lvl1.csv')
   }
@@ -123,6 +152,27 @@ async function writeToCsv(ipList: Set<string>, ipLevel: string ) {
   }
 
   
+=======
+    await csvWriterOne.writeRecords(ipsAndLevel)
+      .then(() => {
+        console.log('...Done writing to ip_addresses_lvl1.csv');
+      });
+  }
+
+  if (ipLevel == "2") {
+    await csvWriterTwo.writeRecords(ipsAndLevel)
+      .then(() => {
+        console.log('...Done writing to ip_addresses_lvl2.csv');
+      });
+  }
+  
+  if (ipLevel == "3") {
+    await csvWriterThree.writeRecords(ipsAndLevel)
+      .then(() => {
+        console.log('...Done writing to ip_addresses_lvl3.csv');
+      });
+  }
+>>>>>>> 3cf5bad... Adding terraform files and final changes to lambda code
 }
 
 async function pullAddressesFromCSV(csvFile: string) {
@@ -150,11 +200,19 @@ async function cleanFiles(csvFile: string) {
     csvWriterOne.writeRecords(parsedIpList)
     pullAddressesFromCSV(csvFile)
   }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 3cf5bad... Adding terraform files and final changes to lambda code
   if (csvFile == 'ip_addresses_lvl2.csv') {
     fs.unlinkSync(csvFile)
     csvWriterTwo.writeRecords(parsedIpList)
     pullAddressesFromCSV(csvFile)
   }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 3cf5bad... Adding terraform files and final changes to lambda code
   if (csvFile == 'ip_addresses_lvl3.csv') {
     fs.unlinkSync(csvFile)
     csvWriterThree.writeRecords(parsedIpList)
@@ -162,7 +220,16 @@ async function cleanFiles(csvFile: string) {
   }
 }
 
+<<<<<<< HEAD
 
 chainResults(BaseURL);
 
   
+=======
+exports.myHandler = function() {
+  chainResults(BaseURL);
+}
+
+
+// Write the csv files to the s3 bucket
+>>>>>>> 3cf5bad... Adding terraform files and final changes to lambda code
